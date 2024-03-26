@@ -21,7 +21,7 @@ ALPACA_CREDS = {
 }
 
 class traderML(Strategy):
-    def initialize(self, symbol:str='SPY', cash_at_risk: float=.5, sentiment_time_to_consider: int=3, bracket_buy_take_profit_multiplier: float=1.20, bracket_buy_stop_loss_multiplier: float=.95, bracket_sell_take_profit_multiplier: float=.8, bracket_sell_stop_loss_multiplier: float=1.05, position_size: float=.5):
+    def initialize(self, symbol:str='SPY', cash_at_risk: float=.5, sentiment_time_to_consider: int=3, bracket_buy_take_profit_multiplier: float=1.20, bracket_buy_stop_loss_multiplier: float=.95, bracket_sell_take_profit_multiplier: float=.8, bracket_sell_stop_loss_multiplier: float=1.05, position_size: float=.5, sentiment_confidence_threshold: float=.999, order_type: str='bracket', buy_limit_multiplier: float = 0.95, sell_limit_multiplier: float=1.05, limit_order_expiry: str='day'):
         self.symbol=symbol
         self.sleeptime = '24H'
         self.last_trade = None
@@ -32,6 +32,11 @@ class traderML(Strategy):
         self.bracket_sell_take_profit_multiplier = bracket_sell_take_profit_multiplier
         self.bracket_sell_stop_loss_multiplier = bracket_sell_stop_loss_multiplier
         self.position_size = position_size
+        self.order_type = order_type
+        self.sentiment_confidence_threshold = sentiment_confidence_threshold
+        self.buy_limit_multiplier = buy_limit_multiplier
+        self.sell_limit_multiplier = sell_limit_multiplier
+        self.limit_order_expiry = limit_order_expiry
         self.api = REST(base_url=BASE_URL, key_id=ALPACA_CREDS['API_KEY'], secret_key=ALPACA_CREDS['API_SECRET'])
 
     def position_sizing(self):
@@ -57,16 +62,49 @@ class traderML(Strategy):
         probability, sentiment = self.get_sentiment()
 
         if cash > last_price:
-            if sentiment == 'positive' and probability > .999:
-                if self.last_trade == 'sell':
-                    self.sell_all()
-                order = self.create_order(self.symbol, quantity, 'buy', type='bracket', take_profit_price=last_price*self.bracket_buy_take_profit_multiplier, stop_loss_price=last_price*self.bracket_buy_stop_loss_multiplier)
-                self.submit_order(order)
-                self.last_trade = 'buy'
-            elif sentiment == 'negative' and probability > .999:
-                if self.last_trade == 'buy':
-                    self.sell_all()
-                order = self.create_order(self.symbol, quantity, 'sell', type='bracket', take_profit_price=last_price*self.bracket_sell_take_profit_multiplier, stop_loss_price=last_price*self.bracket_sell_stop_loss_multiplier)
-                self.submit_order(order)
-                self.last_trade = 'sell'
+            if self.order_type == 'bracket':
+                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'sell':
+                        self.sell_all()
+                    order = self.create_order(self.symbol, quantity, 'buy', type='bracket', take_profit_price=last_price*self.bracket_buy_take_profit_multiplier, stop_loss_price=last_price*self.bracket_buy_stop_loss_multiplier)
+                    self.submit_order(order)
+                    self.last_trade = 'buy'
+                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'buy':
+                        self.sell_all()
+                    order = self.create_order(self.symbol, quantity, 'sell', type='bracket', take_profit_price=last_price*self.bracket_sell_take_profit_multiplier, stop_loss_price=last_price*self.bracket_sell_stop_loss_multiplier)
+                    self.submit_order(order)
+                    self.last_trade = 'sell'
 
+            elif self.order_type == 'market':
+                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'sell':
+                        self.sell_all()
+                    order = self.create_order(self.symbol, quantity, 'buy', type='market')
+                    self.submit_order(order)
+                    self.last_trade = 'buy'
+                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'buy':
+                        self.sell_all()
+                    order = self.create_order(self.symbol, quantity, 'sell', type='market')
+                    self.submit_order(order)
+                    self.last_trade = 'sell'
+
+            elif self.order_type == 'limit':
+                limit_price = None
+                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'sell':
+                        self.sell_all()
+                    limit_price = last_price * self.buy_limit_multiplier
+                    order_side = 'buy'
+                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+                    if self.last_trade == 'buy':
+                        self.sell_all()
+                    limit_price = last_price * self.sell_limit_multiplier
+                    order_side = 'sell'
+
+                if limit_price:
+                    order = self.create_order(self.symbol, quantity, order_side, type='limit', limit_price=limit_price, time_in_force=self.limit_order_expiry)
+                    self.submit_order(order)
+                    self.last_trade = order_side
+           
