@@ -56,55 +56,65 @@ class traderML(Strategy):
         news = [event.__dict__["_raw"]["headline"] for event in news]
         probability, sentiment = estimate_sentiment(news)
         return probability, sentiment
+    
+    def execute_bracket_order(self, sentiment, probability, last_price, quantity):
+        if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'sell':
+                self.sell_all()
+            order = self.create_order(self.symbol, quantity, 'buy', type='bracket', take_profit_price=last_price*self.bracket_buy_take_profit_multiplier, stop_loss_price=last_price*self.bracket_buy_stop_loss_multiplier)
+            self.submit_order(order)
+            self.last_trade = 'buy'
+        elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'buy':
+                self.sell_all()
+            order = self.create_order(self.symbol, quantity, 'sell', type='bracket', take_profit_price=last_price*self.bracket_sell_take_profit_multiplier, stop_loss_price=last_price*self.bracket_sell_stop_loss_multiplier)
+            self.submit_order(order)
+            self.last_trade = 'sell'
+    
+    def execute_market_order(self, sentiment, probability, quantity):
+        if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'sell':
+                self.sell_all()
+            order = self.create_order(self.symbol, quantity, 'buy', type='market')
+            self.submit_order(order)
+            self.last_trade = 'buy'
+        elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'buy':
+                self.sell_all()
+            order = self.create_order(self.symbol, quantity, 'sell', type='market')
+            self.submit_order(order)
+            self.last_trade = 'sell'
+
+    def execute_limit_order(self, sentiment, probability, last_price, quantity):
+        limit_price = None
+        if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'sell':
+                self.sell_all()
+            limit_price = last_price * self.buy_limit_multiplier
+            order_side = 'buy'
+        elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
+            if self.last_trade == 'buy':
+                self.sell_all()
+            limit_price = last_price * self.sell_limit_multiplier
+            order_side = 'sell'
+
+        if limit_price:
+            order = self.create_order(self.symbol, quantity, order_side, type='limit', limit_price=limit_price, time_in_force=self.limit_order_expiry)
+            self.submit_order(order)
+            self.last_trade = order_side
 
     def on_trading_iteration(self):
         cash, last_price, quantity = self.position_sizing()
         probability, sentiment = self.get_sentiment()
 
         if cash > last_price:
+
             if self.order_type == 'bracket':
-                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'sell':
-                        self.sell_all()
-                    order = self.create_order(self.symbol, quantity, 'buy', type='bracket', take_profit_price=last_price*self.bracket_buy_take_profit_multiplier, stop_loss_price=last_price*self.bracket_buy_stop_loss_multiplier)
-                    self.submit_order(order)
-                    self.last_trade = 'buy'
-                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'buy':
-                        self.sell_all()
-                    order = self.create_order(self.symbol, quantity, 'sell', type='bracket', take_profit_price=last_price*self.bracket_sell_take_profit_multiplier, stop_loss_price=last_price*self.bracket_sell_stop_loss_multiplier)
-                    self.submit_order(order)
-                    self.last_trade = 'sell'
+                self.execute_bracket_order(sentiment, probability, last_price, quantity)
 
             elif self.order_type == 'market':
-                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'sell':
-                        self.sell_all()
-                    order = self.create_order(self.symbol, quantity, 'buy', type='market')
-                    self.submit_order(order)
-                    self.last_trade = 'buy'
-                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'buy':
-                        self.sell_all()
-                    order = self.create_order(self.symbol, quantity, 'sell', type='market')
-                    self.submit_order(order)
-                    self.last_trade = 'sell'
+                self.execute_market_order(sentiment, probability, quantity)
 
             elif self.order_type == 'limit':
-                limit_price = None
-                if sentiment == 'positive' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'sell':
-                        self.sell_all()
-                    limit_price = last_price * self.buy_limit_multiplier
-                    order_side = 'buy'
-                elif sentiment == 'negative' and probability > self.sentiment_confidence_threshold:
-                    if self.last_trade == 'buy':
-                        self.sell_all()
-                    limit_price = last_price * self.sell_limit_multiplier
-                    order_side = 'sell'
-
-                if limit_price:
-                    order = self.create_order(self.symbol, quantity, order_side, type='limit', limit_price=limit_price, time_in_force=self.limit_order_expiry)
-                    self.submit_order(order)
-                    self.last_trade = order_side
+                self.execute_limit_order(sentiment, probability, last_price, quantity)
            
