@@ -38,6 +38,10 @@ class strategyParams(BaseModel):
 strategy_instance = None
 broker=Alpaca(ALPACA_CREDS)
 
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
+
 @app.post("/update_params")
 def update_params(params: strategyParams):
     global strategy_instance
@@ -64,6 +68,7 @@ def update_params(params: strategyParams):
         for var_name, value in vars(params).items():
             if value is not None:
                 setattr(strategy_instance, var_name, value)
+                print(f'Updated {var_name} to {value}')
     
     return {'message': 'Parameters updated'}
 
@@ -74,7 +79,13 @@ def execute_bot(params: strategyParams):
         raise HTTPException(status_code=404, detail="Bot not initialized")
     
     
-    strategy_instance = traderML(name='mlstrat', broker=broker, parameters={'symbol': params.symbol,'cash_at_risk': params.cash_at_risk, 'bracket_buy_take_profit_price': params.bracket_buy_take_profit_multiplier, 'bracket_buy_stop_loss_price': params.bracket_buy_stop_loss_multiplier, 'bracket_sell_take_profit_multiplier': params.bracket_sell_take_profit_multiplier, 'bracket_sell_stop_loss_multiplier': params.bracket_sell_stop_loss_multiplier, 'position_size': params.position_size,'order_type': params.order_type,
+    strategy_instance = traderML(name='mlstrat', broker=broker, parameters={'symbol': params.symbol,'cash_at_risk': params.cash_at_risk, 
+                        'bracket_buy_take_profit_price': params.bracket_buy_take_profit_multiplier, 
+                        'bracket_buy_stop_loss_price': params.bracket_buy_stop_loss_multiplier, 
+                        'bracket_sell_take_profit_multiplier': params.bracket_sell_take_profit_multiplier, 
+                        'bracket_sell_stop_loss_multiplier': params.bracket_sell_stop_loss_multiplier, 
+                        'position_size': params.position_size,
+                        'order_type': params.order_type,
                         'buy_limit_multiplier': params.buy_limit_multiplier,
                         'sell_limit_multiplier': params.sell_limit_multiplier,
                         'limit_order_expiry': params.limit_order_expiry,
