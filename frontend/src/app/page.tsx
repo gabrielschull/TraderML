@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div>
       <AnimatedTitle/>
-      <p>Compare your machine learning trading bot strategy with historical data</p>
+      
     </div>
   );
 }
