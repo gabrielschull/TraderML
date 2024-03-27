@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAnimation, motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { TextGenerateEffect } from "./text-generate-effect";
 
 
 export function AnimatedTitle() {
+    const [showBox, setShowBox] = useState(false);
   const text = 'TraderML';
   const words = 'Compare your sentiment-based machine learning trading strategy with historical data';
 
@@ -16,6 +17,14 @@ export function AnimatedTitle() {
     threshold: 0.5,
     triggerOnce: true,
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowBox(true);
+    }, 5000);
+  
+    return () => clearTimeout(timer);
+    }, []);
   
   useEffect(() => {
     if (inView) {
@@ -36,7 +45,7 @@ export function AnimatedTitle() {
       y: `0em`,
       transition: {
         duration: 1,
-        delay: custom * 0.1,
+        delay: custom * 0.15+4,
         ease: [0.2, 0.65, 0.3, 0.9],
       },
     }),
@@ -68,6 +77,13 @@ export function AnimatedTitle() {
     </div>
 
     <TextGenerateEffect words={words}/>
+    {showBox && (
+    <div className='box'>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    )}
     
     </div>
     </div>

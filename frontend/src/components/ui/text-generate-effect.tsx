@@ -24,9 +24,9 @@ export const TextGenerateEffect = ({
           delay: stagger(0.2),
         }
       );
-    }, 3300); // Delay in milliseconds
+    }, 4000); 
   
-    return () => clearTimeout(timer); // Clean up on component unmount
+    return () => clearTimeout(timer); 
   }, [scope.current]);
 
   const renderWords = () => {
