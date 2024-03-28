@@ -6,7 +6,7 @@ import { useInView } from "react-intersection-observer";
 import { TextGenerateEffect } from "./text-generate-effect";
 
 
-export function AnimatedTitle() {
+export function TitleSection() {
     const [showBox, setShowBox] = useState(false);
   const text = 'TraderML';
   const words = 'Compare your sentiment-based machine learning trading strategy with historical data';
