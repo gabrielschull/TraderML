@@ -45,6 +45,7 @@ def read_root():
 @app.post("/update_params")
 def update_params(params: strategyParams):
     global strategy_instance
+    print(f'Incoming parameters: {vars(params)}')  # print incoming parameters
     if strategy_instance is None:
         strategy_instance = traderML(
             name='mlstrat', 

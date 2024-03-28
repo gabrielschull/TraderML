@@ -11,73 +11,109 @@ import { SelectTrigger, SelectValue, SelectContent, SelectItem, Select } from '.
 
 
 const limitSchema = z.object({
-    sentimentTimeToConsider: z.coerce.number().min(0),
-    sentimentConfidenceThreshold: z.coerce.number().min(0).max(1),
-    buyLimitMultiplier: z.coerce.number().min(0),
-    sellLimitMultiplier: z.coerce.number().min(0),
-    limitOrderExpiry: z.string(),
-    orderType: z.string(),
+    sentiment_time_to_consider: z.coerce.number().min(0),
+    sentiment_confidence_threshold: z.coerce.number().min(0).max(1),
+    buy_limit_multiplier: z.coerce.number().min(0),
+    sell_limit_multiplier: z.coerce.number().min(0),
+    limit_order_expiry: z.string(),
+    order_type: z.string(),
 }) 
 
 const bracketSchema = z.object({
-    sentimentTimeToConsider: z.coerce.number().min(0),
-    sentimentConfidenceThreshold: z.coerce.number().min(0).max(1),
-    bracketBuyTakeProfitMultiplier: z.coerce.number().min(0),
-    bracketSellTakeProfitMultiplier: z.coerce.number().min(0),
-    bracketBuyStopLossMultiplier: z.coerce.number().min(0),
-    bracketSellStopLossMultiplier: z.coerce.number().min(0),
-    orderType: z.string(),
+    sentiment_time_to_consider: z.coerce.number().min(0),
+    sentiment_confidence_threshold: z.coerce.number().min(0).max(1),
+    bracket_buy_take_profit_multiplier: z.coerce.number().min(0),
+    bracket_sell_take_profit_multiplier: z.coerce.number().min(0),
+    bracket_buy_stop_loss_multiplier: z.coerce.number().min(0),
+    bracket_sell_stop_loss_multiplier: z.coerce.number().min(0),
+    order_type: z.string(),
 
 })
 
 const marketSchema = z.object({
-    sentimentTimeToConsider: z.coerce.number().min(0),
-    sentimentConfidenceThreshold: z.coerce.number().min(0).max(1),
-    orderType: z.string(),
+    sentiment_time_to_consider: z.coerce.number().min(0),
+    sentiment_confidence_threshold: z.coerce.number().min(0).max(1),
+    order_type: z.string(),
 
 })
 
 export const OrderSelector = () => {
 
-    const [orderType, setOrderType] = useState<string>('');
+    const [order_type, setorder_type] = useState<string>('');
 
     const limitForm = useForm<z.infer<typeof limitSchema>>({
         resolver: zodResolver(limitSchema),
         defaultValues: {
-            sentimentTimeToConsider: 3,
-            sentimentConfidenceThreshold: 0.999,
-            orderType: '',
-            buyLimitMultiplier: 1.01,
-            sellLimitMultiplier: 0.99,
-            limitOrderExpiry: 'day',
+            sentiment_time_to_consider: 3,
+            sentiment_confidence_threshold: 0.999,
+            order_type: 'limit',
+            buy_limit_multiplier: 1.01,
+            sell_limit_multiplier: 0.99,
+            limit_order_expiry: 'day',
         }
     });
     const bracketForm = useForm<z.infer<typeof bracketSchema>>({ 
         resolver: zodResolver(bracketSchema),
         defaultValues: {
-            sentimentTimeToConsider: 3,
-            sentimentConfidenceThreshold: 0.999,
-            orderType: '',
-            bracketBuyTakeProfitMultiplier: 1.01,
-            bracketSellTakeProfitMultiplier: 0.99,
-            bracketBuyStopLossMultiplier: 0.98,
-            bracketSellStopLossMultiplier: 1.02,
+            sentiment_time_to_consider: 3,
+            sentiment_confidence_threshold: 0.999,
+            order_type: 'bracket',
+            bracket_buy_take_profit_multiplier: 1.01,
+            bracket_sell_take_profit_multiplier: 0.99,
+            bracket_buy_stop_loss_multiplier: 0.98,
+            bracket_sell_stop_loss_multiplier: 1.02,
         }
     });
     const marketForm = useForm<z.infer<typeof marketSchema>>({
         resolver: zodResolver(marketSchema),
         defaultValues: {
-            sentimentTimeToConsider: 3,
-            sentimentConfidenceThreshold: 0.999,
-            orderType: '',
+            sentiment_time_to_consider: 3,
+            sentiment_confidence_threshold: 0.999,
+            order_type: 'market',
         }
     });
 
-
-
-    const handleSubmit = (values: z.infer<typeof limitSchema>) => {
-        console.log(values);
+    
+    
+    
+    const handleSubmit = async (values: any) => {
+        console.log('values:', values)
+        try {
+            const response = await fetch('http://localhost:8000/update_params',{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(values),
+            })
+            
+            if (!response.ok) {
+                throw new Error('Failed to update parameters');
+            }
+            const data = response.json();
+            console.log('data:', data)
+        } catch (error) {
+            console.error('Error:', error);
+        }
     }
+    
+    // Function to get the current form and its submit handler based on order_type
+    const getOrderForm = () => {
+        switch (order_type) {
+            case 'limit':
+                return limitForm;
+            case 'bracket':
+                return bracketForm;
+            case 'market':
+                return marketForm;
+            default:
+                
+                return bracketForm;
+        }
+    };
+    
+    const currentForm = getOrderForm();
+
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">
@@ -85,14 +121,14 @@ export const OrderSelector = () => {
         Choose & customize your order type, then run your strategy
       </div>
       <div>
-        <Form {...limitForm}>
-        <form onSubmit={limitForm.handleSubmit(handleSubmit)} className= "max-w-md w-full flex flex-col gap-4">
-        <FormField control={limitForm.control} 
-        name='orderType'
+        <Form {...(currentForm as any)}>
+        <form onSubmit={currentForm.handleSubmit(handleSubmit)} className= "max-w-md w-full flex flex-col gap-4">
+        <FormField control={(currentForm as any).control} 
+        name='order_type'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel>Order Type</FormLabel>
-                <Select onValueChange={(value) => {field.onChange(value); setOrderType(value)}}>
+                <Select onValueChange={(value) => {field.onChange(value); setorder_type(value)}}>
                 
                 <FormControl>
                     <SelectTrigger>
@@ -112,13 +148,13 @@ export const OrderSelector = () => {
         }}
         />
 
-        {orderType== 'bracket'&& (
+        {order_type== 'bracket'&& (
         <>
         <FormField control={bracketForm.control} 
-        name='sentimentTimeToConsider'
+        name='sentiment_time_to_consider'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className="text-white">Sentiment Time To Consider</FormLabel>
+                <FormLabel className="text-white">Sentiment Time To Consider In Days</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Time To Consider" {...field}/>
                 </FormControl>
@@ -128,10 +164,10 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={bracketForm.control} 
-        name='sentimentConfidenceThreshold'
+        name='sentiment_confidence_threshold'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className="text-white">Sentiment Confidence Threshold</FormLabel>
+                <FormLabel className="text-white">Sentiment Confidence Threshold, 0 - 0.999</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Confidence Threshold" {...field}/>
                 </FormControl>
@@ -141,7 +177,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={bracketForm.control} 
-        name='bracketBuyTakeProfitMultiplier'
+        name='bracket_buy_take_profit_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className="text-white">Bracket Buy Take Profit Multiplier</FormLabel>
@@ -154,7 +190,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={bracketForm.control} 
-        name='bracketSellTakeProfitMultiplier'
+        name='bracket_sell_take_profit_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className="text-white">Bracket Sell Take Profit Multiplier</FormLabel>
@@ -167,7 +203,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={bracketForm.control} 
-        name='bracketBuyStopLossMultiplier'
+        name='bracket_buy_stop_loss_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className="text-white">Bracket Buy Stop Loss Multiplier</FormLabel>
@@ -180,7 +216,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={bracketForm.control} 
-        name='bracketSellStopLossMultiplier'
+        name='bracket_sell_stop_loss_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className="text-white">Bracket Sell Stop Loss Multiplier</FormLabel>
@@ -196,13 +232,13 @@ export const OrderSelector = () => {
         </>
         )}
 
-       {orderType== 'limit'&& ( 
+       {order_type== 'limit'&& ( 
        <>
        <FormField control={limitForm.control} 
-        name='sentimentTimeToConsider'
+        name='sentiment_time_to_consider'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className="text-white">Sentiment Time To Consider</FormLabel>
+                <FormLabel className="text-white">Sentiment Time To Consider In Days</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Time To Consider" {...field}/>
                 </FormControl>
@@ -212,10 +248,10 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={limitForm.control} 
-        name='sentimentConfidenceThreshold'
+        name='sentiment_confidence_threshold'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className="text-white">Sentiment Confidence Threshold</FormLabel>
+                <FormLabel className="text-white">Sentiment Confidence Threshold, 0 - 0.999</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Confidence Threshold" {...field}/>
                 </FormControl>
@@ -225,7 +261,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={limitForm.control} 
-        name='buyLimitMultiplier'
+        name='buy_limit_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className="text-white">Buy Limit Multiplier</FormLabel>
@@ -238,7 +274,7 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={limitForm.control} 
-        name='sellLimitMultiplier'
+        name='sell_limit_multiplier'
         render={({field}) => {
             return ( <FormItem>
                 <FormLabel className='text-white'>Sell Limit Multiplier</FormLabel>
@@ -252,13 +288,13 @@ export const OrderSelector = () => {
         />
         </>
         )}
-        {orderType== 'market'&& (
+        {order_type== 'market'&& (
         <>
         <FormField control={marketForm.control} 
-        name='sentimentTimeToConsider'
+        name='sentiment_time_to_consider'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className='text-white'>Sentiment Time To Consider</FormLabel>
+                <FormLabel className='text-white'>Sentiment Time To Consider In Days</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Time To Consider" {...field}/>
                 </FormControl>
@@ -268,10 +304,10 @@ export const OrderSelector = () => {
         }}
         />
         <FormField control={limitForm.control} 
-        name='sentimentConfidenceThreshold'
+        name='sentiment_confidence_threshold'
         render={({field}) => {
             return ( <FormItem>
-                <FormLabel className="text-white">Sentiment Confidence Threshold</FormLabel>
+                <FormLabel className="text-white">Sentiment Confidence Threshold, 0 - 0.999</FormLabel>
                 <FormControl>
                     <Input placeholder="Sentiment Confidence Threshold" {...field}/>
                 </FormControl>
