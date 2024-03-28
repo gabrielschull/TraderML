@@ -83,25 +83,40 @@ export const OrderSelector = () => {
     
     
     const handleSubmit = async (values: any) => {
-        console.log('values:', values)
+        console.log('values:', values);
         try {
-            const response = await fetch('http://localhost:8000/update_params',{
+            const response = await fetch('http://localhost:8000/update_params', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(values),
-            })
-            
+            });
+    
             if (!response.ok) {
                 throw new Error('Failed to update parameters');
             }
-            const data = response.json();
-            console.log('data:', data)
+            const data = await response.json(); 
+            console.log('data:', data);
+    
+            // Start the bot
+            const startResponse = await fetch('http://localhost:8000/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(values),
+            });
+    
+            if (!startResponse.ok) {
+                throw new Error('Failed to start the bot');
+            }
+            const startData = await startResponse.json(); 
+            console.log('startData:', startData);
         } catch (error) {
             console.error('Error:', error);
         }
-    }
+    };
     
     // Function to get the current form and its submit handler based on order_type
     const getOrderForm = () => {
